@@ -1,0 +1,7 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Script file="LibChangelog-1.0.lua"/>
+    <Script file="Bindings.lua"/>
+    <Script file="View.lua"/>
+    <Script file="Window.lua"/>
+    <Script file="Coordinator.lua"/>
+</Ui>
