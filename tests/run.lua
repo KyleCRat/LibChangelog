@@ -2,7 +2,7 @@
 -- Supply a real LibStub path when running outside an addon checkout.
 strmatch = string.match
 dofile(arg[1] or "../LibStub/LibStub.lua")
-LibStub:NewLibrary("LibModernSettings-1.0", 9)
+LibStub:NewLibrary("LibModernSettings-1.0", 10)
 
 local timers, frames, errors = {}, {}, {}
 local combat, focus = false, nil
@@ -45,6 +45,7 @@ function CreateFrame()
 end
 
 UIParent = CreateFrame()
+SlashCmdList = {}
 
 local files = {
     "LibChangelog-1.0.lua", "Bindings.lua", "View.lua", "Window.lua", "Coordinator.lua",
@@ -109,7 +110,6 @@ check(previewStore.acknowledgedVersion == nil, "preview leaves released acknowle
 -- a recreation of Blizzard templates. Native hit testing is checked in game.
 lib._window = {
     frame = CreateFrame(), rows = {},
-    footer = { SetText = function() end },
     errorText = { SetShown = function() end },
 }
 local entry = beta:_CreateEntry()
@@ -130,13 +130,15 @@ lib:_DismissBatch()
 check(gammaStore.acknowledgedVersion == "1" and deltaStore.acknowledgedVersion == "1",
     "closing dismisses unread entries too")
 
+dofile("tests/window.lua")(lib)
+
 -- Coordinator: actual event/timer paths, one coordinator across embed copies.
 local eventFrame = lib._eventFrame
 local function event(name) eventFrame.scripts.OnEvent(eventFrame, name) end
 local prepared, revealed = 0, 0
-lib._PrepareBatch = function(self, entries)
+lib._PrepareBatch = function(self, entries, manual)
     prepared = prepared + 1
-    self._batch = { entries = entries }
+    self._batch = { entries = entries, manual = manual }
 end
 lib._RevealBatch = function(self)
     revealed = revealed + 1
@@ -175,6 +177,8 @@ combat = true
 check(select(2, preview:Show()) == "not-safe", "manual Show respects combat")
 combat = false
 
+dofile("tests/commands.lua")(lib, register, function(value) combat = value end, event, drainTimers)
+
 -- Public delegation and live prototypes.
 lib._CreateSettingsPage = function(_, controller, options) return { controller = controller, options = options } end
 check(alpha:CreateSettingsPage().controller == alpha, "settings page uses its controller")
@@ -186,20 +190,28 @@ alpha.views = {}
 
 dofile("tests/bindings.lua")(lib, function(value) focus = value end, errors)
 dofile("tests/views.lua")(lib)
+dofile("tests/highlights.lua")(lib)
 dofile("tests/generator.lua")
 
 local frameCount = #frames
 local prototype = getmetatable(alpha)
+local slashHandler = SlashCmdList.LIBCHANGELOG
 loadLibrary()
 check(#frames == frameCount and lib._eventFrame == eventFrame, "same-MINOR embeds install nothing twice")
+check(SlashCmdList.LIBCHANGELOG == slashHandler, "same-MINOR embeds do not replace the command")
 loadLibrary(2)
 check(LibStub("LibChangelog-1.0") == lib and getmetatable(alpha) == prototype,
     "newer embed preserves library, controllers and prototypes")
 check(lib._controllers.Alpha == alpha and #frames == frameCount, "upgrade keeps registrations and event frame")
 local upgradedRefresh = alpha.Refresh
+local upgradedShowAll = lib.ShowAll
+local upgradedSlashHandler = SlashCmdList.LIBCHANGELOG
+check(upgradedSlashHandler ~= slashHandler, "newer embed upgrades the shared command")
 loadLibrary(1)
 check(alpha.Refresh == upgradedRefresh and lib._implementationMinor == 2,
     "older-first/newer-first files cannot overwrite selected methods")
+check(lib.ShowAll == upgradedShowAll and SlashCmdList.LIBCHANGELOG == upgradedSlashHandler,
+    "older embeds cannot overwrite the global command or public ShowAll")
 local otherFamily = LibStub:NewLibrary("LibChangelog-2.0", 1)
 check(otherFamily ~= lib, "independent API families coexist")
 
@@ -208,8 +220,35 @@ check(not ok, "invalid registration reports an error")
 ok = pcall(function() alpha:SetAutoShowEnabled("yes") end)
 check(not ok, "invalid notification values are rejected")
 local selectedLMSMinor = LibStub.minors["LibModernSettings-1.0"]
-LibStub.minors["LibModernSettings-1.0"] = 8
-check(not pcall(lib._GetSettingsLibrary, lib), "LMS releases older than 1.8.0 are rejected")
+LibStub.minors["LibModernSettings-1.0"] = 9
+check(not pcall(lib._GetSettingsLibrary, lib), "LMS releases without selected-button support are rejected")
 LibStub.minors["LibModernSettings-1.0"] = selectedLMSMinor
+
+local function registerEmphasis(emphasis)
+    return lib:Register("EmphasisExample", {
+        displayName = "Emphasis Example",
+        release = {
+            version = "1",
+            notes = {},
+            highlights = { { title = "A useful change", emphasis = emphasis } },
+        },
+        storage = { get = function() end, set = function() end },
+    })
+end
+
+for emphasis, label in pairs({
+    featured = "FEATURED",
+    important = "IMPORTANT",
+    requested = "USER REQUESTED",
+}) do
+    local controller = registerEmphasis(emphasis)
+    check(controller.options.release.highlights[1].emphasis == emphasis,
+        "supported emphasis survives registration")
+    check(lib._highlightEmphasisLabels[emphasis] == label,
+        "each supported emphasis supplies its own display label")
+end
+
+check(registerEmphasis(nil), "ordinary highlights do not require emphasis")
+check(not pcall(registerEmphasis, "unsupported"), "unknown emphasis is still rejected")
 
 print("LibChangelog: state, lifecycle, callbacks, generator and mixed-embed tests passed")

@@ -76,6 +76,31 @@ function lib:_ShowManual(controller)
     return true
 end
 
+function lib:ShowAll()
+    if not self:_CanShow() then return false, "not-safe" end
+
+    local entries = self:_CollectAll()
+    if #entries == 0 then return false, "no-consumers" end
+
+    -- Explicit browsing includes read, opted-out and unreleased entries. Replace
+    -- any current batch without acknowledging it or saving unfinished controls.
+    self:_Suspend()
+    self:_PrepareBatch(entries, true)
+    self:_RevealBatch()
+    return true
+end
+
+SLASH_LIBCHANGELOG1 = "/changelog"
+SlashCmdList["LIBCHANGELOG"] = function()
+    local shown, reason = lib:ShowAll()
+    if shown then return end
+
+    local message = reason == "no-consumers"
+        and "No addon changelogs are available"
+        or "Changelogs can't open right now. Try again after combat, loading, cinematics, or ready checks"
+    print("|cff82c5ffChangelog|r: " .. message)
+end
+
 local handlers = {}
 
 function handlers.PLAYER_ENTERING_WORLD()

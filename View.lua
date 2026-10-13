@@ -8,6 +8,85 @@ lib._viewPrototype = lib._viewPrototype or {}
 local View = lib._viewPrototype
 View.__index = View
 
+local HEADER_MIN_HEIGHT = 1
+
+function View:_CreateLayout(settings, options)
+    local header = CreateFrame("Frame", nil, self.frame)
+    header:SetPoint("TOPLEFT")
+    self.headerLayout = settings:CreateCanvasLayout(header, {
+        width = options.width,
+        height = options.height,
+        measurementFrame = options.measurementFrame,
+        scrollArea = self.popup and { preset = "inset" } or nil,
+        style = {
+            paddingTop = 4,
+            paddingBottom = 8,
+        },
+    })
+    assert(type(self.headerLayout.GetContentInsets) == "function",
+        "LibChangelog requires LMS's scroll-area canvas support; load the updated LMS checkout first")
+
+    local width = self.headerLayout:GetCanvasWidth()
+    local height = self.headerLayout:GetCanvasHeight()
+    self.frame:SetSize(width, height)
+    self.headerHeight = HEADER_MIN_HEIGHT
+    self.headerLayout:SetSize(width, self.headerHeight)
+
+    self.body = CreateFrame("Frame", nil, self.frame, self.popup and "InsetFrameTemplate" or nil)
+    self.body:SetPoint("TOPLEFT", 0, -self.headerHeight)
+    self.body:SetPoint("BOTTOMRIGHT")
+
+    if self.popup then
+        self.inset = self.body
+    end
+
+    self.layout = settings:CreateCanvasLayout(self.body, {
+        width = width,
+        height = height - self.headerHeight,
+        scrollable = true,
+        scrollArea = self.popup and { preset = "inset" } or nil,
+    })
+
+    -- Let wrapped titles and settled font metrics set the header's height,
+    -- instead of reserving empty rows above the scrolling notes.
+    self.headerLayout:GetContent():HookScript("OnSizeChanged", function(_, _, headerHeight)
+        self.headerHeight = headerHeight
+        self:_ResizeBody()
+    end)
+end
+
+function View:_ResizeBody()
+    self.body:SetPoint("TOPLEFT", 0, -self.headerHeight)
+    self.layout:SetSize(self.frame:GetWidth(), self.frame:GetHeight() - self.headerHeight)
+end
+
+function View:_CreateHeader()
+    local entry = self.entry
+    local release = entry.release.version
+    if entry.release.date then release = release .. "  |  " .. entry.release.date end
+
+    local columns = self.headerLayout:GetRootFlow():BeginColumns({ verticalAlign = "center" })
+    columns.left:AddText({ text = entry.displayName, fontObject = GameFontNormalLarge })
+    columns.left:AddText({ text = release, fontObject = GameFontHighlightSmall })
+    self.autoShow = columns.right:AddControl("checkbox", {
+        label = "Show changelog for " .. entry.displayName .. " on login",
+        tooltip = "Show changelogs after an update. You can still open them manually when this is off.",
+        value = entry.controller:GetAutoShowEnabled(),
+        onChanged = function(checked)
+            self:Interact()
+            self.controller:SetAutoShowEnabled(checked)
+        end,
+    })
+    columns:Finish()
+    self.headerLayout:Finalize()
+end
+
+function View:SetSize(width, height)
+    self.frame:SetSize(width, height)
+    self.headerLayout:SetSize(width, HEADER_MIN_HEIGHT)
+    self:_ResizeBody()
+end
+
 function View:Interact()
     lib:_Acknowledge(self.entry)
 end
@@ -36,15 +115,29 @@ end
 function View:_RefreshBindings()
     local context, label = self.controller:_GetContext()
     local changed = context ~= self.context
+    local hasLabel = label ~= nil and label ~= ""
 
     self.context = context
-    self.contextText:SetText(label or "")
+
+    if hasLabel then
+        if self.contextText then
+            self.contextText:SetText(label)
+        else
+            self.contextText = self.contextGroup:AddText({
+                text = label,
+                fontObject = GameFontHighlightSmall,
+            }, { marginBottom = 8 })
+        end
+    end
+
+    self.contextGroup:SetShown(hasLabel)
     self.autoShow:SetValue(self.controller:GetAutoShowEnabled())
 
     for _, binding in ipairs(self.bindings) do
         binding:Refresh(changed)
     end
 
+    self.headerLayout:RequestLayout()
     self.layout:RequestLayout()
 end
 
@@ -88,25 +181,35 @@ local function addNotes(flow, notes)
     end
 end
 
-local function addHighlight(view, flow, highlight)
+function View:_AddHighlight(flow, highlight)
     local group = flow:BeginGroup({ marginTop = 8 })
     local emphasis = highlight.emphasis
 
     if emphasis then
+        local color = emphasis == "important" and "|cffffb347" or "|cff82c5ff"
+
         group:AddText({
-            text = emphasis == "important" and "|cffffb347IMPORTANT|r" or "|cff82c5ffFEATURED|r",
+            text = color .. lib._highlightEmphasisLabels[emphasis] .. "|r",
             fontObject = GameFontNormalSmall,
         }, { marginBottom = 4 })
     end
 
     group:AddText({
         text = highlight.title,
-        fontObject = emphasis and GameFontNormalHuge or GameFontNormalLarge,
+        fontObject = GameFontNormalLarge,
     }, { marginBottom = 8 })
+
+    local descriptionFlow, controlsFlow = group, group
+    local columns
+
+    if highlight.controls and #highlight.controls > 0 then
+        columns = group:BeginColumns()
+        descriptionFlow, controlsFlow = columns.left, columns.right
+    end
 
     if highlight.artwork then
         local artwork = highlight.artwork
-        local frame = group:AddCustom(artwork.height or 120, { marginBottom = 8 })
+        local frame = descriptionFlow:AddCustom(artwork.height or 120, { marginBottom = 8 })
         local texture = frame:CreateTexture(nil, "ARTWORK")
         texture:SetAllPoints()
 
@@ -118,11 +221,15 @@ local function addHighlight(view, flow, highlight)
     end
 
     if highlight.body then
-        group:AddText({ text = highlight.body }, { marginBottom = 12 })
+        descriptionFlow:AddText({ text = highlight.body }, { marginBottom = 12 })
     end
 
     for _, definition in ipairs(highlight.controls or {}) do
-        lib:_AddBoundControl(view, group, definition)
+        lib:_AddBoundControl(self, controlsFlow, definition)
+    end
+
+    if columns then
+        columns:Finish()
     end
 
     group:Finish({ marginBottom = 14 })
@@ -166,42 +273,15 @@ function lib:_CreateView(entry, parent, options)
     }, View)
 
     local ok, failure = pcall(function()
-        view.layout = settings:CreateCanvasLayout(frame, {
-            width = options.width,
-            height = options.height,
-            measurementFrame = options.measurementFrame,
-            scrollable = true,
-            viewportMarginTop = 86,
-        })
+        view:_CreateLayout(settings, options)
+        view:_CreateHeader()
         view.messages = settings:CreateFlashMessages(frame)
-        local title = entry.displayName .. " — " .. entry.release.version
-        if entry.release.date then title = title .. "  |  " .. entry.release.date end
-
-        local heading = settings:CreateText(frame, {
-            text = title,
-            width = view.layout:GetContentWidth(),
-            fontObject = GameFontNormalLarge,
-        })
-        heading:SetPoint("TOPLEFT", 8, -4)
-
-        view.autoShow = settings:CreateCheckbox(frame, {
-            label = "Show updates automatically for " .. entry.displayName,
-            width = view.layout:GetContentWidth(),
-            value = entry.controller:GetAutoShowEnabled(),
-            onChanged = function(checked)
-                view:Interact()
-                entry.controller:SetAutoShowEnabled(checked)
-            end,
-        })
-        view.autoShow:SetPoint("TOPLEFT", 8, -30)
-        view.contextText = settings:CreateText(frame, {
-            text = "",
-            width = view.layout:GetContentWidth(),
-            fontObject = GameFontHighlightSmall,
-        })
-        view.contextText:SetPoint("TOPLEFT", 8, -60)
 
         local flow = view.layout:GetRootFlow()
+        view.contextGroup = flow:BeginGroup()
+        view.contextGroup:Finish()
+        view.contextGroup:SetShown(false)
+
         local highlights = entry.release.highlights or {}
 
         if entry.release.title then
@@ -213,7 +293,7 @@ function lib:_CreateView(entry, parent, options)
         end
 
         for _, highlight in ipairs(highlights) do
-            addHighlight(view, flow, highlight)
+            view:_AddHighlight(flow, highlight)
         end
 
         local notesGroup

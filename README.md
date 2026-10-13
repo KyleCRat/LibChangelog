@@ -2,17 +2,40 @@
 
 Interactive update highlights for Retail WoW addons, with a shared multi-addon
 window and an embeddable Settings page. Requires LibStub and **LibModernSettings
-1.8.0 or newer** (`LibModernSettings-1.0`, implementation minor 9).
+1.9.0 or newer** (LibStub MINOR 10 in the `LibModernSettings-1.0` API family).
 
 API family: `LibChangelog-1.0`, implementation minor 1. This is an **unreleased
 development library** targeting Retail 12.1.5 and Lua 5.1. It has no standalone
 addon TOC and does not own SavedVariables.
+
+This development checkout also requires LMS's unreleased texture-button and
+scroll-area support. Update both library checkouts together and ensure that the
+development LMS copy loads first until those APIs receive a release MINOR.
+
+## Open all changelogs
+
+Use `/changelog` to browse the latest registered release from every consumer in
+one window, including read updates, addons with automatic popups disabled, and
+Unreleased previews. It does not enable automatic popups or mark entries as read
+just by opening. An existing popup is replaced by this complete list.
+
+Addons can use `LibStub("LibChangelog-1.0"):ShowAll()` for the same behavior. It
+returns true, or false plus `not-safe` / `no-consumers`. The normal combat,
+loading, cinematic and ready-check restrictions apply; blocked commands explain
+why they cannot open rather than queuing a new window.
 
 ## Register an addon
 
 Load LibStub, LMS, then `LibChangelog-1.0/embed.xml`. Register after your own
 SavedVariables/database initialization, once per addon. Keep the release table
 and control definitions immutable after registration.
+
+Bundle both libraries with your addon, even if it uses LMS only for changelogs.
+Keep one shared LMS copy at `Libs/LibModernSettings-1.0`, including its `Media`
+folder; LibChangelog does not require a second nested copy or another installed
+addon. Declare both released pins in the consumer's `.pkgmeta`. Do not rely on
+recursive dependency packaging: the [BigWigs packager](https://github.com/BigWigsMods/packager#the-packagemeta-file)
+only reads an external library's `.pkgmeta` for ignored files.
 
 ```lua
 local controller = LibStub("LibChangelog-1.0"):Register("MyAddon", {
@@ -56,7 +79,8 @@ local controller = LibStub("LibChangelog-1.0"):Register("MyAddon", {
 ```
 
 The `context()` function is optional. Return a stable scalar identity and an
-optional label. Change the identity when the setting owner is replaced/reset,
+optional label above the highlights; omitting the label reserves no space.
+Change the identity when the setting owner is replaced/reset,
 not just when a profile's displayed name changes. Call `Refresh()` after such
 changes; it cancels old drafts before reading the new owner's values.
 
@@ -90,9 +114,15 @@ but does not acknowledge a release until the player interacts.
 ## Entries and controls
 
 Highlights are an ordered list. `title` is required; `body`, `emphasis`,
-`artwork`, and `controls` are optional. Emphasis is `featured` or `important`;
-it is independent of whether the entry has actions. Artwork is
+`artwork`, and `controls` are optional. Emphasis is `featured`, `important`, or
+`requested` (shown as **USER REQUESTED**); it is independent of whether the entry
+has actions. Omit it for an ordinary highlight. Artwork is
 `{ texture = pathOrFileID, height = 120 }` or `{ atlas = name, height = 120 }`.
+
+Emphasis adds a small tag without changing the title size. Below the title,
+entries with controls place artwork and description on the left and controls
+on the right. Entries without controls use the full width for their content.
+The popup and embedded Settings page share this layout.
 
 Controls pass `options` to LMS. Supported types and callbacks:
 
@@ -125,13 +155,19 @@ control type; it is not loaded by `embed.xml` or packaged in the runtime.
 
 - First installs and changed release IDs notify after world entry and a short
   collection delay. Unreleased (`unreleased = true`) is manual-preview only.
-- Multiple addons share one window with a persistent, independently scrollable
-  list. The first alphabetical addon is visible immediately but remains NEW.
+- **Show changelog for ADDON_NAME on login**, beside the addon title, controls future automatic
+  notices for that addon. Manual browsing remains available when it is off.
+- Every popup keeps the same independently scrollable addon list on the left,
+  even for one addon. Alternating rows show the addon's icon beside its name and
+  release/unread status. Icons come from `IconTexture` or `IconAtlas` TOC metadata,
+  with a question-mark fallback. The first alphabetical addon opens immediately; displaying
+  it does not mark it as read.
 - Explicit selection, a control interaction, expanding notes or deliberately
   scrolling acknowledges that addon immediately. Hover, reflow, programmatic
   scroll/focus and initial display do not. Failed rendering is not acknowledged.
-- Close all updates, X, or Escape dismisses the displayed batch, including
-  unread entries. Escape leaves menus/editors/dialogs their own dismissal first.
+- **Dismiss all** at the bottom of the addon list, X, or Escape dismisses the
+  displayed batch, including unread entries. Escape leaves menus/editors/dialogs
+  their own dismissal first.
 - Combat, loading, cinematics and ready checks suspend the window without
   dismissing it. The same batch resumes when safe. Later registrations wait
   for another batch. No background polling is used.
@@ -170,3 +206,7 @@ secure behavior require an in-game check; see the consumer's authoring guide.
 Publish this repository independently before adding a consumer external pin.
 Keep its API-family folder `LibChangelog-1.0` when releasing compatible SemVer
 versions. Consumers supply LibStub and LMS; no separate installed addon is needed.
+
+Release LMS's texture-button support before LibChangelog's first release and
+update consumer pins to that release or newer. Its higher LibStub revision replaces
+older same-family embeds regardless of load order.

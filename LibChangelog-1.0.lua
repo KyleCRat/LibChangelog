@@ -21,7 +21,7 @@ end
 
 function lib:_GetSettingsLibrary()
     local settings, minor = LibStub("LibModernSettings-1.0", true)
-    assert(settings and minor >= 9, "LibChangelog requires LibModernSettings 1.8.0 or newer")
+    assert(settings and minor >= 10, "LibChangelog requires LibModernSettings 1.9.0 or newer")
 
     return settings
 end
@@ -36,6 +36,13 @@ local CONTROL_CALLBACKS = {
 }
 lib._controlCallbacks = CONTROL_CALLBACKS
 
+-- Registration and rendering use the same supported emphasis labels.
+lib._highlightEmphasisLabels = {
+    featured = "FEATURED",
+    important = "IMPORTANT",
+    requested = "USER REQUESTED",
+}
+
 local function validateRelease(release)
     assert(type(release) == "table", "release must be a table")
     assert(type(release.version) == "string" and release.version ~= "", "release.version is required")
@@ -49,8 +56,8 @@ local function validateRelease(release)
 
     for _, highlight in ipairs(release.highlights or {}) do
         assert(type(highlight.title) == "string", "highlight.title is required")
-        assert(highlight.emphasis == nil or highlight.emphasis == "featured"
-            or highlight.emphasis == "important", "unsupported highlight emphasis")
+        assert(highlight.emphasis == nil or lib._highlightEmphasisLabels[highlight.emphasis] ~= nil,
+            "unsupported highlight emphasis")
 
         for _, control in ipairs(highlight.controls or {}) do
             local callback = CONTROL_CALLBACKS[control.type]
@@ -128,16 +135,11 @@ function lib:_Acknowledge(entry)
     self:_UpdateBadges()
 end
 
-function lib:_CollectPending()
+function lib:_CollectAll()
     local entries = {}
 
-    for addonName, controller in pairs(self._controllers) do
-        local entry = controller:_CreateEntry()
-
-        if controller:GetAutoShowEnabled() and self:_IsNew(entry)
-            and self._sessionFailures[addonName] ~= entry.release.version then
-            entries[#entries + 1] = entry
-        end
+    for _, controller in pairs(self._controllers) do
+        entries[#entries + 1] = controller:_CreateEntry()
     end
 
     table.sort(entries, function(left, right)
@@ -149,6 +151,21 @@ function lib:_CollectPending()
 
         return leftName < rightName
     end)
+
+    return entries
+end
+
+function lib:_CollectPending()
+    local entries = {}
+
+    for _, entry in ipairs(self:_CollectAll()) do
+        local controller = entry.controller
+
+        if controller:GetAutoShowEnabled() and self:_IsNew(entry)
+            and self._sessionFailures[controller.addonName] ~= entry.release.version then
+            entries[#entries + 1] = entry
+        end
+    end
 
     return entries
 end
