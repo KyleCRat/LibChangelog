@@ -2,15 +2,11 @@
 
 Interactive update highlights for Retail WoW addons, with a shared multi-addon
 window and an embeddable Settings page. Requires LibStub and **LibModernSettings
-1.9.0 or newer** (LibStub MINOR 10 in the `LibModernSettings-1.0` API family).
+1.10.0 or newer** (LibStub MINOR 11 in the `LibModernSettings-1.0` API family).
 
-API family: `LibChangelog-1.0`, implementation minor 1. This is an **unreleased
-development library** targeting Retail 12.1.5 and Lua 5.1. It has no standalone
+Release `1.0.0` uses the `LibChangelog-1.0` API family with LibStub MINOR `1`.
+It targets Retail 12.1.5 and Lua 5.1. It has no standalone
 addon TOC and does not own SavedVariables.
-
-This development checkout also requires LMS's unreleased texture-button and
-scroll-area support. Update both library checkouts together and ensure that the
-development LMS copy loads first until those APIs receive a release MINOR.
 
 ## Open all changelogs
 
@@ -36,6 +32,16 @@ folder; LibChangelog does not require a second nested copy or another installed
 addon. Declare both released pins in the consumer's `.pkgmeta`. Do not rely on
 recursive dependency packaging: the [BigWigs packager](https://github.com/BigWigsMods/packager#the-packagemeta-file)
 only reads an external library's `.pkgmeta` for ignored files.
+
+```yaml
+externals:
+    Libs/LibModernSettings-1.0:
+        url: https://github.com/KyleCRat/LibModernSettings.git
+        tag: 1.10.0
+    Libs/LibChangelog-1.0:
+        url: https://github.com/KyleCRat/LibChangelog.git
+        tag: 1.0.0
+```
 
 ```lua
 local controller = LibStub("LibChangelog-1.0"):Register("MyAddon", {
@@ -63,7 +69,7 @@ local controller = LibStub("LibChangelog-1.0"):Register("MyAddon", {
                         enabled = function() return true end,
                         options = {
                             label = "Button size",
-                            min = 20, max = 60, step = 1,
+                            minValue = 20, maxValue = 60, step = 1,
                             onChanged = function(value) ApplyButtonSize(value) end,
                         },
                     },
@@ -207,6 +213,6 @@ Publish this repository independently before adding a consumer external pin.
 Keep its API-family folder `LibChangelog-1.0` when releasing compatible SemVer
 versions. Consumers supply LibStub and LMS; no separate installed addon is needed.
 
-Release LMS's texture-button support before LibChangelog's first release and
-update consumer pins to that release or newer. Its higher LibStub revision replaces
+Publish LMS 1.10.0 before LibChangelog 1.0.0, then align consumer checkouts and
+package pins to those releases or newer. LMS's higher LibStub revision replaces
 older same-family embeds regardless of load order.

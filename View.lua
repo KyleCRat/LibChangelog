@@ -24,7 +24,7 @@ function View:_CreateLayout(settings, options)
         },
     })
     assert(type(self.headerLayout.GetContentInsets) == "function",
-        "LibChangelog requires LMS's scroll-area canvas support; load the updated LMS checkout first")
+        "LibChangelog requires LMS's scroll-area canvas support from LibModernSettings 1.10.0 or newer")
 
     local width = self.headerLayout:GetCanvasWidth()
     local height = self.headerLayout:GetCanvasHeight()

@@ -21,7 +21,7 @@ end
 
 function lib:_GetSettingsLibrary()
     local settings, minor = LibStub("LibModernSettings-1.0", true)
-    assert(settings and minor >= 10, "LibChangelog requires LibModernSettings 1.9.0 or newer")
+    assert(settings and minor >= 11, "LibChangelog requires LibModernSettings 1.10.0 or newer")
 
     return settings
 end

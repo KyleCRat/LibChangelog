@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.0] - 2026-10-12
 
 ### Added
 
@@ -10,3 +10,8 @@
 - Global `/changelog` command and `ShowAll()` API to browse every consumer's latest
   registered release, including read updates and addons with popups disabled.
 - Markdown-to-Lua release-note generator for bundling the current changelog.
+
+### Requirements
+
+- Retail 12.1.5, LibStub, and LibModernSettings 1.10.0 or newer.
+- Uses LibStub MINOR 1 within the `LibChangelog-1.0` API family.

@@ -2,7 +2,7 @@
 -- Supply a real LibStub path when running outside an addon checkout.
 strmatch = string.match
 dofile(arg[1] or "../LibStub/LibStub.lua")
-LibStub:NewLibrary("LibModernSettings-1.0", 10)
+LibStub:NewLibrary("LibModernSettings-1.0", 11)
 
 local timers, frames, errors = {}, {}, {}
 local combat, focus = false, nil
@@ -220,8 +220,10 @@ check(not ok, "invalid registration reports an error")
 ok = pcall(function() alpha:SetAutoShowEnabled("yes") end)
 check(not ok, "invalid notification values are rejected")
 local selectedLMSMinor = LibStub.minors["LibModernSettings-1.0"]
-LibStub.minors["LibModernSettings-1.0"] = 9
-check(not pcall(lib._GetSettingsLibrary, lib), "LMS releases without selected-button support are rejected")
+LibStub.minors["LibModernSettings-1.0"] = 10
+check(not pcall(lib._GetSettingsLibrary, lib), "LMS releases without scroll-area and texture-button support are rejected")
+LibStub.minors["LibModernSettings-1.0"] = 12
+check(pcall(lib._GetSettingsLibrary, lib), "newer same-family LMS releases remain supported")
 LibStub.minors["LibModernSettings-1.0"] = selectedLMSMinor
 
 local function registerEmphasis(emphasis)
@@ -250,5 +252,12 @@ end
 
 check(registerEmphasis(nil), "ordinary highlights do not require emphasis")
 check(not pcall(registerEmphasis, "unsupported"), "unknown emphasis is still rejected")
+
+dofile("examples/Controls.lua")
+local example = lib._controllers.LibChangelogControlsExample
+local exampleSlider = example.options.release.highlights[1].controls[2]
+check(exampleSlider.type == "slider" and exampleSlider.options.minValue == 20
+    and exampleSlider.options.maxValue == 60 and exampleSlider.options.step == 1,
+    "the development slider example uses LMS's required option names")
 
 print("LibChangelog: state, lifecycle, callbacks, generator and mixed-embed tests passed")

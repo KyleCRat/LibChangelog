@@ -42,7 +42,7 @@ controller = library:Register("LibChangelogControlsExample", {
                     }),
                     binding("slider", "size", {
                         label = "Size (typed values may exceed the track)",
-                        min = 20, max = 60, step = 1,
+                        minValue = 20, maxValue = 60, step = 1,
                         onChanged = function(value) values.size = value end,
                     }),
                     binding("dropdown", "position", {
@@ -82,7 +82,7 @@ controller = library:Register("LibChangelogControlsExample", {
         notes = {
             { kind = "heading", text = "Example notes" },
             { kind = "bullet", text = "Controls are supplied by LMS; their validation and keyboard behavior remain intact." },
-            { kind = "bullet", text = "Close all updates dismisses the complete batch, not just the selected addon." },
+            { kind = "bullet", text = "Dismiss all closes the complete batch, not just the selected addon." },
         },
     },
 })
