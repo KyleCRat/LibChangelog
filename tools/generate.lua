@@ -2,9 +2,14 @@
 local directory = arg[0]:match("^(.*[/\\])") or ""
 local Markdown = dofile(directory .. "Markdown.lua")
 local inputPath, outputPath, version, mode = unpack(arg)
-assert(inputPath and outputPath and version,
-    "Usage: lua tools/generate.lua CHANGELOG.md Output.lua VERSION [--check]")
-assert(mode == nil or mode == "--check", "the only optional argument is --check")
+assert(
+    inputPath and outputPath and version,
+    "Usage: lua tools/generate.lua CHANGELOG.md Output.lua VERSION [--check]"
+)
+assert(
+    mode == nil or mode == "--check",
+    "the only optional argument is --check"
+)
 
 local input = assert(io.open(inputPath, "rb"))
 local source = input:read("*a")
@@ -17,7 +22,10 @@ if mode == "--check" then
     local output = assert(io.open(outputPath, "rb"))
     local current = output:read("*a")
     output:close()
-    assert(current == generated, "bundled release notes are stale; run the generator without --check")
+    assert(
+        current == generated,
+        "bundled release notes are stale; run the generator without --check"
+    )
     print("Bundled changelog matches " .. version)
 else
     local output = assert(io.open(outputPath, "wb"))

@@ -1,8 +1,13 @@
 local MAJOR, MINOR = "LibChangelog-1.0", 1
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Coordinator", MINOR) then return end
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Coordinator", MINOR)
+then
+    return
+end
 
 local STARTUP_DELAY = 2
 lib._lifecycle = lib._lifecycle or { worldReady = IsLoggedIn() }
@@ -10,8 +15,12 @@ lib._lifecycle = lib._lifecycle or { worldReady = IsLoggedIn() }
 function lib:_CanShow()
     local state = self._lifecycle
 
-    return state.worldReady and not state.loading and not state.cinematic
-        and not state.readyCheck and not InCombatLockdown() and UIParent:IsShown()
+    return state.worldReady
+        and not state.loading
+        and not state.cinematic
+        and not state.readyCheck
+        and not InCombatLockdown()
+        and UIParent:IsShown()
         and not (CinematicFrame and CinematicFrame:IsShown())
         and not (MovieFrame and MovieFrame:IsShown())
         and not (ReadyCheckFrame and ReadyCheckFrame:IsShown())
@@ -24,14 +33,17 @@ function lib:_Schedule()
     end
 
     if not self:_CanShow() or not next(self._controllers) then return end
+
     if self._window and self._window.frame:IsShown() then return end
 
     self._timer = C_Timer.NewTimer(STARTUP_DELAY, function()
         self._timer = nil
+
         if not self:_CanShow() then return end
 
         if not self._batch then
             local entries = self:_CollectPending()
+
             if #entries == 0 then return end
 
             self:_PrepareBatch(entries)
@@ -80,6 +92,7 @@ function lib:ShowAll()
     if not self:_CanShow() then return false, "not-safe" end
 
     local entries = self:_CollectAll()
+
     if #entries == 0 then return false, "no-consumers" end
 
     -- Explicit browsing includes read, opted-out and unreleased entries. Replace
@@ -91,12 +104,14 @@ function lib:ShowAll()
 end
 
 SLASH_LIBCHANGELOG1 = "/changelog"
+
 SlashCmdList["LIBCHANGELOG"] = function()
     local shown, reason = lib:ShowAll()
+
     if shown then return end
 
     local message = reason == "no-consumers"
-        and "No addon changelogs are available"
+            and "No addon changelogs are available"
         or "Changelogs can't open right now. Try again after combat, loading, cinematics, or ready checks"
     print("|cff82c5ffChangelog|r: " .. message)
 end
@@ -183,15 +198,25 @@ end)
 
 if not lib._visibilityHooksInstalled then
     lib._visibilityHooksInstalled = true
-    UIParent:HookScript("OnHide", function() lib:_Suspend() end)
-    UIParent:HookScript("OnShow", function() lib:_Schedule() end)
+    UIParent:HookScript("OnHide", function()
+        lib:_Suspend()
+    end)
+    UIParent:HookScript("OnShow", function()
+        lib:_Schedule()
+    end)
 
     if MovieFrame then
-        MovieFrame:HookScript("OnShow", function() lib:_Suspend() end)
-        MovieFrame:HookScript("OnHide", function() lib:_Schedule() end)
+        MovieFrame:HookScript("OnShow", function()
+            lib:_Suspend()
+        end)
+        MovieFrame:HookScript("OnHide", function()
+            lib:_Schedule()
+        end)
     end
 
     if ReadyCheckFrame then
-        ReadyCheckFrame:HookScript("OnHide", function() lib:_Schedule() end)
+        ReadyCheckFrame:HookScript("OnHide", function()
+            lib:_Schedule()
+        end)
     end
 end

@@ -1,0 +1,58 @@
+# Only globals used by this repository; review additions against the WoW API.
+# Names are checked here; API member signatures and secret-value contracts are not.
+base: lua51
+globals:
+    # Lua 5.1 permits assertions without a message; tests report source locations.
+    assert:
+        args:
+            - type: any
+            - type: string
+              required: false
+    C_AddOns:
+        any: true
+    C_Timer:
+        any: true
+    CinematicFrame:
+        any: true
+    CreateFrame:
+        any: true
+    GameFontHighlight:
+        any: true
+    GameFontHighlightSmall:
+        any: true
+    GameFontNormal:
+        any: true
+    GameFontNormalHuge:
+        any: true
+    GameFontNormalLarge:
+        any: true
+    GameFontNormalSmall:
+        any: true
+    GetCurrentKeyBoardFocus:
+        any: true
+    geterrorhandler:
+        any: true
+    InCombatLockdown:
+        any: true
+    IsLoggedIn:
+        any: true
+    LibStub:
+        any: true
+    Menu:
+        any: true
+    MovieFrame:
+        any: true
+    ReadyCheckFrame:
+        any: true
+    ScrollBoxConstants:
+        any: true
+    SLASH_LIBCHANGELOG1:
+        any: true
+    SlashCmdList:
+        any: true
+    strmatch:
+        any: true
+    UIParent:
+        any: true
+    UISpecialFrames:
+        any: true

@@ -9,23 +9,36 @@ local function plainText(text)
 end
 
 function Markdown.Extract(source, version)
-    assert(type(version) == "string" and version ~= "", "a release version is required")
+    assert(
+        type(version) == "string" and version ~= "",
+        "a release version is required"
+    )
     source = source:gsub("^\239\187\191", ""):gsub("\r\n", "\n")
 
-    local release = { version = version, notes = {}, unreleased = version:lower() == "unreleased" }
+    local release = {
+        version = version,
+        notes = {},
+        unreleased = version:lower() == "unreleased",
+    }
     local found, active, fenced = false, false, false
     local pending
 
     local function flush()
         if not pending then return end
 
-        if pending.kind ~= "code" then pending.text = plainText(pending.text) end
+        if pending.kind ~= "code" then
+            pending.text = plainText(pending.text)
+        end
+
         release.notes[#release.notes + 1] = pending
         pending = nil
     end
 
     for line in (source .. "\n"):gmatch("([^\n]*)\n") do
-        local heading = not fenced and (line:match("^## %[(.-)%]") or line:match("^## (Unreleased)%s*$"))
+        local heading = not fenced
+            and (
+                line:match("^## %[(.-)%]") or line:match("^## (Unreleased)%s*$")
+            )
 
         if heading then
             flush()
@@ -47,7 +60,8 @@ function Markdown.Extract(source, version)
                     pending = { kind = "code", text = "" }
                 end
             elseif fenced then
-                pending.text = pending.text == "" and line or (pending.text .. "\n" .. line)
+                pending.text = pending.text == "" and line
+                    or (pending.text .. "\n" .. line)
             elseif line:match("^%s*$") then
                 flush()
             else
@@ -56,12 +70,15 @@ function Markdown.Extract(source, version)
 
                 if section then
                     flush()
-                    release.notes[#release.notes + 1] = { kind = "heading", text = plainText(section) }
+                    release.notes[#release.notes + 1] =
+                        { kind = "heading", text = plainText(section) }
                 elseif bullet then
                     flush()
                     pending = { kind = "bullet", text = bullet }
                 elseif pending then
-                    pending.text = pending.text .. " " .. line:match("^%s*(.-)%s*$")
+                    pending.text = pending.text
+                        .. " "
+                        .. line:match("^%s*(.-)%s*$")
                 else
                     pending = { kind = "paragraph", text = line }
                 end
@@ -78,14 +95,21 @@ function Markdown.Extract(source, version)
 end
 
 local function quote(value)
-    value = value:gsub("\\", "\\\\"):gsub('"', '\\"')
-        :gsub("\n", "\\n"):gsub("\r", "\\r"):gsub("\t", "\\t")
+    value = value
+        :gsub("\\", "\\\\")
+        :gsub('"', '\\"')
+        :gsub("\n", "\\n")
+        :gsub("\r", "\\r")
+        :gsub("\t", "\\t")
     return '"' .. value .. '"'
 end
 
 function Markdown.Generate(release, field)
     field = field or "ReleaseNotes"
-    assert(field:match("^[%a_][%w_]*$"), "output field must be a Lua identifier")
+    assert(
+        field:match("^[%a_][%w_]*$"),
+        "output field must be a Lua identifier"
+    )
 
     local lines = {
         "-- Generated from CHANGELOG.md; do not edit by hand.",
@@ -96,11 +120,19 @@ function Markdown.Generate(release, field)
     }
 
     if release.unreleased then lines[#lines + 1] = "    unreleased = true," end
-    if release.date then lines[#lines + 1] = "    date = " .. quote(release.date) .. "," end
+
+    if release.date then
+        lines[#lines + 1] = "    date = " .. quote(release.date) .. ","
+    end
+
     lines[#lines + 1] = "    notes = {"
 
     for _, block in ipairs(release.notes) do
-        lines[#lines + 1] = "        { kind = " .. quote(block.kind) .. ", text = " .. quote(block.text) .. " },"
+        lines[#lines + 1] = "        { kind = "
+            .. quote(block.kind)
+            .. ", text = "
+            .. quote(block.text)
+            .. " },"
     end
 
     lines[#lines + 1] = "    },"

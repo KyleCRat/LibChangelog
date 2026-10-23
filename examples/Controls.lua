@@ -8,14 +8,22 @@ local values = {
     size = 40,
     position = "top",
     name = "Example",
-    color = { r = 0.2, g = 0.6, b = 1, a = 1, mode = "custom" },
+    color = {
+        r = 0.2,
+        g = 0.6,
+        b = 1,
+        a = 1,
+        mode = "custom",
+    },
 }
 local controller
 
 local function binding(controlType, key, options)
     return {
         type = controlType,
-        getValue = function() return values[key] end,
+        getValue = function()
+            return values[key]
+        end,
         options = options,
     }
 end
@@ -23,10 +31,17 @@ end
 controller = library:Register("LibChangelogControlsExample", {
     displayName = "Changelog Controls Example",
     storage = {
-        get = function(key) return notifications[key] end,
-        set = function(key, value) notifications[key] = value end,
+        get = function(key)
+            return notifications[key]
+        end,
+        set = function(key, value)
+            notifications[key] = value
+        end,
     },
-    context = function() return owner, "Temporary example settings — no addon settings are changed" end,
+    context = function()
+        return owner,
+            "Temporary example settings — no addon settings are changed"
+    end,
     release = {
         version = "example-1",
         title = "Try each control",
@@ -38,22 +53,36 @@ controller = library:Register("LibChangelogControlsExample", {
                 controls = {
                     binding("checkbox", "enabled", {
                         label = "Enabled",
-                        onChanged = function(value) values.enabled = value end,
+                        onChanged = function(value)
+                            values.enabled = value
+                        end,
                     }),
                     binding("slider", "size", {
                         label = "Size (typed values may exceed the track)",
-                        minValue = 20, maxValue = 60, step = 1,
-                        onChanged = function(value) values.size = value end,
+                        minValue = 20,
+                        maxValue = 60,
+                        step = 1,
+                        onChanged = function(value)
+                            values.size = value
+                        end,
                     }),
                     binding("dropdown", "position", {
                         label = "Position",
-                        choices = { { value = "top", label = "Top" }, { value = "bottom", label = "Bottom" } },
-                        onChanged = function(value) values.position = value end,
+                        choices = {
+                            { value = "top", label = "Top" },
+                            { value = "bottom", label = "Bottom" },
+                        },
+                        onChanged = function(value)
+                            values.position = value
+                        end,
                     }),
                     binding("textInput", "name", {
                         label = "Name (cannot be empty)",
                         onCommit = function(text)
-                            if text:match("^%s*$") then return false, "Enter a name" end
+                            if text:match("^%s*$") then
+                                return false, "Enter a name"
+                            end
+
                             values.name = text
                             return text
                         end,
@@ -62,7 +91,9 @@ controller = library:Register("LibChangelogControlsExample", {
                         label = "Color",
                         hasOpacity = true,
                         classColor = true,
-                        onChanged = function(value) values.color = value end,
+                        onChanged = function(value)
+                            values.color = value
+                        end,
                     }),
                     {
                         type = "button",
@@ -81,8 +112,14 @@ controller = library:Register("LibChangelogControlsExample", {
         },
         notes = {
             { kind = "heading", text = "Example notes" },
-            { kind = "bullet", text = "Controls are supplied by LMS; their validation and keyboard behavior remain intact." },
-            { kind = "bullet", text = "Dismiss all closes the complete batch, not just the selected addon." },
+            {
+                kind = "bullet",
+                text = "Controls are supplied by LMS; their validation and keyboard behavior remain intact.",
+            },
+            {
+                kind = "bullet",
+                text = "Dismiss all closes the complete batch, not just the selected addon.",
+            },
         },
     },
 })
@@ -91,12 +128,21 @@ local otherNotifications = {}
 library:Register("LibChangelogOtherExample", {
     displayName = "Second Example Addon",
     storage = {
-        get = function(key) return otherNotifications[key] end,
-        set = function(key, value) otherNotifications[key] = value end,
+        get = function(key)
+            return otherNotifications[key]
+        end,
+        set = function(key, value)
+            otherNotifications[key] = value
+        end,
     },
     release = {
         version = "example-2",
         title = "An update without highlights",
-        notes = { { kind = "bullet", text = "The sidebar must make this second addon visible even before you select it." } },
+        notes = {
+            {
+                kind = "bullet",
+                text = "The sidebar must make this second addon visible even before you select it.",
+            },
+        },
     },
 })

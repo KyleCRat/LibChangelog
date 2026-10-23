@@ -1,19 +1,28 @@
 local MAJOR, MINOR = "LibChangelog-1.0", 1
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Bindings", MINOR) then return end
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Bindings", MINOR)
+then
+    return
+end
 
 lib._bindingPrototype = lib._bindingPrototype or {}
 local Binding = lib._bindingPrototype
 Binding.__index = Binding
 
 local function pack(...)
+    -- Preserve nil positions in callback argument tuples.
+    -- selene: allow(mixed_table)
     return { n = select("#", ...), ... }
 end
 
 local function sameValue(left, right)
-    if type(left) ~= "table" or type(right) ~= "table" then return left == right end
+    if type(left) ~= "table" or type(right) ~= "table" then
+        return left == right
+    end
 
     for key, value in pairs(left) do
         if not sameValue(value, right[key]) then return false end
@@ -29,11 +38,10 @@ end
 function Binding:GetEnabled()
     if InCombatLockdown() then return false, "Available after combat" end
 
-    if self.definition.enabled then
-        return self.definition.enabled()
-    end
+    if self.definition.enabled then return self.definition.enabled() end
 
-    return self.definition.options.enabled ~= false, self.definition.options.disabledTooltip
+    return self.definition.options.enabled ~= false,
+        self.definition.options.disabledTooltip
 end
 
 function Binding:CancelDraft()
@@ -62,11 +70,18 @@ function Binding:Refresh(ownerChanged)
     if ownerChanged or not enabled then self:CancelDraft() end
 
     self.frame:SetControlEnabled(enabled, reason)
+
     if not self.definition.getValue then return end
 
     local focused = GetCurrentKeyBoardFocus()
-    if not ownerChanged and focused
-        and (focused == self.control or focused == self.control.valueBox) then return end
+
+    if
+        not ownerChanged
+        and focused
+        and (focused == self.control or focused == self.control.valueBox)
+    then
+        return
+    end
 
     local value = self.definition.getValue()
 
@@ -77,7 +92,11 @@ end
 
 function Binding:Invoke(...)
     local view = self.view
-    if view.entry.failed then return false, "These update controls could not be refreshed" end
+
+    if view.entry.failed then
+        return false, "These update controls could not be refreshed"
+    end
+
     local context = view.controller:_GetContext()
 
     if context ~= view.context then
@@ -86,13 +105,12 @@ function Binding:Invoke(...)
     end
 
     local enabled, reason = self:GetEnabled()
+
     if not enabled then return false, reason end
 
     view:Interact()
 
-    if self.definition.dismissBatch and view.popup then
-        lib:_DismissBatch()
-    end
+    if self.definition.dismissBatch and view.popup then lib:_DismissBatch() end
 
     view.invoking = true
     local result = pack(pcall(self.callback, ...))
@@ -121,7 +139,9 @@ local function watchInteraction(view, frame)
     end)
 
     if frame:IsObjectType("EditBox") then
-        frame:HookScript("OnChar", function() view:Interact() end)
+        frame:HookScript("OnChar", function()
+            view:Interact()
+        end)
     end
 
     for _, child in ipairs({ frame:GetChildren() }) do
@@ -149,8 +169,11 @@ function lib:_AddBoundControl(view, flow, definition)
 
     if definition.getValue then options.value = definition.getValue() end
 
-    if definition.type == "slider" or definition.type == "dropdown"
-        or definition.type == "textInput" then
+    if
+        definition.type == "slider"
+        or definition.type == "dropdown"
+        or definition.type == "textInput"
+    then
         local label = options.label
         options.label = nil
         binding.frame = flow:AddControl("field", {
@@ -161,7 +184,8 @@ function lib:_AddBoundControl(view, flow, definition)
         }, { marginBottom = 10 })
         binding.control = binding.frame:GetControl()
     else
-        binding.frame = flow:AddControl(definition.type, options, { marginBottom = 10 })
+        binding.frame =
+            flow:AddControl(definition.type, options, { marginBottom = 10 })
         binding.control = binding.frame
     end
 

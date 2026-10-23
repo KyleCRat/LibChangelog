@@ -1,8 +1,13 @@
 local MAJOR, MINOR = "LibChangelog-1.0", 1
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("View", MINOR) then return end
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("View", MINOR)
+then
+    return
+end
 
 lib._viewPrototype = lib._viewPrototype or {}
 local View = lib._viewPrototype
@@ -23,8 +28,10 @@ function View:_CreateLayout(settings, options)
             paddingBottom = 8,
         },
     })
-    assert(type(self.headerLayout.GetContentInsets) == "function",
-        "LibChangelog requires LMS's scroll-area canvas support from LibModernSettings 1.10.0 or newer")
+    assert(
+        type(self.headerLayout.GetContentInsets) == "function",
+        "LibChangelog requires LMS's scroll-area canvas support from LibModernSettings 1.10.0 or newer"
+    )
 
     local width = self.headerLayout:GetCanvasWidth()
     local height = self.headerLayout:GetCanvasHeight()
@@ -32,13 +39,16 @@ function View:_CreateLayout(settings, options)
     self.headerHeight = HEADER_MIN_HEIGHT
     self.headerLayout:SetSize(width, self.headerHeight)
 
-    self.body = CreateFrame("Frame", nil, self.frame, self.popup and "InsetFrameTemplate" or nil)
+    self.body = CreateFrame(
+        "Frame",
+        nil,
+        self.frame,
+        self.popup and "InsetFrameTemplate" or nil
+    )
     self.body:SetPoint("TOPLEFT", 0, -self.headerHeight)
     self.body:SetPoint("BOTTOMRIGHT")
 
-    if self.popup then
-        self.inset = self.body
-    end
+    if self.popup then self.inset = self.body end
 
     self.layout = settings:CreateCanvasLayout(self.body, {
         width = width,
@@ -49,24 +59,37 @@ function View:_CreateLayout(settings, options)
 
     -- Let wrapped titles and settled font metrics set the header's height,
     -- instead of reserving empty rows above the scrolling notes.
-    self.headerLayout:GetContent():HookScript("OnSizeChanged", function(_, _, headerHeight)
-        self.headerHeight = headerHeight
-        self:_ResizeBody()
-    end)
+    self.headerLayout
+        :GetContent()
+        :HookScript("OnSizeChanged", function(_, _, headerHeight)
+            self.headerHeight = headerHeight
+            self:_ResizeBody()
+        end)
 end
 
 function View:_ResizeBody()
     self.body:SetPoint("TOPLEFT", 0, -self.headerHeight)
-    self.layout:SetSize(self.frame:GetWidth(), self.frame:GetHeight() - self.headerHeight)
+    self.layout:SetSize(
+        self.frame:GetWidth(),
+        self.frame:GetHeight() - self.headerHeight
+    )
 end
 
 function View:_CreateHeader()
     local entry = self.entry
     local release = entry.release.version
-    if entry.release.date then release = release .. "  |  " .. entry.release.date end
 
-    local columns = self.headerLayout:GetRootFlow():BeginColumns({ verticalAlign = "center" })
-    columns.left:AddText({ text = entry.displayName, fontObject = GameFontNormalLarge })
+    if entry.release.date then
+        release = release .. "  |  " .. entry.release.date
+    end
+
+    local columns = self.headerLayout
+        :GetRootFlow()
+        :BeginColumns({ verticalAlign = "center" })
+    columns.left:AddText({
+        text = entry.displayName,
+        fontObject = GameFontNormalLarge,
+    })
     columns.left:AddText({ text = release, fontObject = GameFontHighlightSmall })
     self.autoShow = columns.right:AddControl("checkbox", {
         label = "Show changelog for " .. entry.displayName .. " on login",
@@ -94,7 +117,9 @@ end
 function View:ResetNavigation()
     self.notesHeader:SetExpanded(false)
     self.notesGroup:SetShown(false)
-    self.layout:GetScrollBox():ScrollToBegin(ScrollBoxConstants.NoScrollInterpolation)
+    self.layout
+        :GetScrollBox()
+        :ScrollToBegin(ScrollBoxConstants.NoScrollInterpolation)
 end
 
 function View:QueueRefresh()
@@ -151,10 +176,16 @@ function View:Refresh()
 
     if not ok then
         self.entry.failed = true
-        lib._sessionFailures[self.controller.addonName] = self.entry.release.version
+        lib._sessionFailures[self.controller.addonName] =
+            self.entry.release.version
         self:CancelDrafts()
-        self.messages:Show("These update controls could not be refreshed", "error")
+        self.messages:Show(
+            "These update controls could not be refreshed",
+            "error"
+        )
+
         if self.lastError ~= failure then geterrorhandler()(failure) end
+
         self.lastError = failure
     else
         self.entry.failed = nil
@@ -168,6 +199,7 @@ local function addNotes(flow, notes)
             flow:AddSection(block.text)
         else
             local text = block.text:gsub("|", "||")
+
             if block.kind == "bullet" then text = "• " .. text end
 
             flow:AddText({
@@ -209,7 +241,10 @@ function View:_AddHighlight(flow, highlight)
 
     if highlight.artwork then
         local artwork = highlight.artwork
-        local frame = descriptionFlow:AddCustom(artwork.height or 120, { marginBottom = 8 })
+        local frame = descriptionFlow:AddCustom(
+            artwork.height or 120,
+            { marginBottom = 8 }
+        )
         local texture = frame:CreateTexture(nil, "ARTWORK")
         texture:SetAllPoints()
 
@@ -221,16 +256,17 @@ function View:_AddHighlight(flow, highlight)
     end
 
     if highlight.body then
-        descriptionFlow:AddText({ text = highlight.body }, { marginBottom = 12 })
+        descriptionFlow:AddText(
+            { text = highlight.body },
+            { marginBottom = 12 }
+        )
     end
 
     for _, definition in ipairs(highlight.controls or {}) do
         lib:_AddBoundControl(self, controlsFlow, definition)
     end
 
-    if columns then
-        columns:Finish()
-    end
+    if columns then columns:Finish() end
 
     group:Finish({ marginBottom = 14 })
 end
@@ -285,11 +321,16 @@ function lib:_CreateView(entry, parent, options)
         local highlights = entry.release.highlights or {}
 
         if entry.release.title then
-            flow:AddText({ text = entry.release.title, fontObject = GameFontNormalHuge })
+            flow:AddText({
+                text = entry.release.title,
+                fontObject = GameFontNormalHuge,
+            })
         end
 
         if #highlights == 0 then
-            flow:AddText({ text = "This update is installed. Expand the full changelog below to see what changed." })
+            flow:AddText({
+                text = "This update is installed. Expand the full changelog below to see what changed.",
+            })
         end
 
         for _, highlight in ipairs(highlights) do
@@ -316,14 +357,19 @@ function lib:_CreateView(entry, parent, options)
         watchUserScrolling(view)
         view:Refresh()
 
-        frame:HookScript("OnShow", function() view:Refresh() end)
-        frame:HookScript("OnHide", function() view:CancelDrafts() end)
+        frame:HookScript("OnShow", function()
+            view:Refresh()
+        end)
+        frame:HookScript("OnHide", function()
+            view:CancelDrafts()
+        end)
     end)
 
     if not ok then
         frame:Hide()
         entry.failed = true
-        self._sessionFailures[entry.controller.addonName] = entry.release.version
+        self._sessionFailures[entry.controller.addonName] =
+            entry.release.version
         geterrorhandler()(failure)
         return nil, failure
     end
@@ -339,7 +385,11 @@ function lib:_CreateSettingsPage(controller, options)
 
     local frame = view.frame
     frame.layout = view.layout
-    frame.Sync = function() controller:Refresh() end
+
+    frame.Sync = function()
+        controller:Refresh()
+    end
+
     frame.OnRefresh = frame.Sync
 
     return frame
