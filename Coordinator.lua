@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibChangelog-1.0", 1
+local MAJOR, MINOR = "LibChangelog-1.0", 2
 local lib = LibStub(MAJOR, true)
 
 if

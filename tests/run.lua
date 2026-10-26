@@ -101,7 +101,7 @@ local function loadLibrary(minor)
 
         if minor then
             source = source:gsub(
-                '"LibChangelog%-1%.0", 1',
+                '"LibChangelog%-1%.0", %d+',
                 '"LibChangelog-1.0", ' .. minor
             )
         end
@@ -112,6 +112,7 @@ end
 
 loadLibrary()
 local lib = LibStub("LibChangelog-1.0")
+local releaseMinor = lib._implementationMinor
 
 local function check(condition, message)
     assert(condition, message)
@@ -337,7 +338,8 @@ check(
     SlashCmdList.LIBCHANGELOG == slashHandler,
     "same-MINOR embeds do not replace the command"
 )
-loadLibrary(2)
+local newerMinor = releaseMinor + 1
+loadLibrary(newerMinor)
 check(
     LibStub("LibChangelog-1.0") == lib and getmetatable(alpha) == prototype,
     "newer embed preserves library, controllers and prototypes"
@@ -353,9 +355,10 @@ check(
     upgradedSlashHandler ~= slashHandler,
     "newer embed upgrades the shared command"
 )
+loadLibrary(releaseMinor)
 loadLibrary(1)
 check(
-    alpha.Refresh == upgradedRefresh and lib._implementationMinor == 2,
+    alpha.Refresh == upgradedRefresh and lib._implementationMinor == newerMinor,
     "older-first/newer-first files cannot overwrite selected methods"
 )
 check(

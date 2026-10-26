@@ -4,7 +4,7 @@ Interactive update highlights for Retail WoW addons, with a shared multi-addon
 window and an embeddable Settings page. Requires LibStub and **LibModernSettings
 1.10.0 or newer** (LibStub MINOR 11 in the `LibModernSettings-1.0` API family).
 
-Release `1.0.0` uses the `LibChangelog-1.0` API family with LibStub MINOR `1`.
+Release `1.0.1` uses the `LibChangelog-1.0` API family with LibStub MINOR `2`.
 It targets Retail 12.1.5 and Lua 5.1. It has no standalone
 addon TOC and does not own SavedVariables.
 
@@ -40,7 +40,7 @@ externals:
         tag: 1.10.0
     Libs/LibChangelog-1.0:
         url: https://github.com/KyleCRat/LibChangelog.git
-        tag: 1.0.0
+        tag: 1.0.1
 ```
 
 ```lua
@@ -181,6 +181,8 @@ control type; it is not loaded by `embed.xml` or packaged in the runtime.
   displays a short update notice and the full-notes expander.
 - Compatible embedded copies share one coordinator and update retained
   controllers, bindings and views through persistent prototypes.
+  Windows already created by 1.0.0 remain usable after an upgrade; their row
+  decoration updates on reload.
 
 ## Generate full notes
 
@@ -213,6 +215,6 @@ Publish this repository independently before adding a consumer external pin.
 Keep its API-family folder `LibChangelog-1.0` when releasing compatible SemVer
 versions. Consumers supply LibStub and LMS; no separate installed addon is needed.
 
-Publish LMS 1.10.0 before LibChangelog 1.0.0, then align consumer checkouts and
-package pins to those releases or newer. LMS's higher LibStub revision replaces
-older same-family embeds regardless of load order.
+Keep LMS at 1.10.0 or newer, then align consumer checkouts and package pins after
+reviewing each library release. Higher LibStub revisions replace older same-family
+embeds regardless of load order.

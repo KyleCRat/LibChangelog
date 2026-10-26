@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibChangelog-1.0", 1
+local MAJOR, MINOR = "LibChangelog-1.0", 2
 local lib = LibStub(MAJOR, true)
 
 if
@@ -54,6 +54,9 @@ end
 
 local function layoutSidebarBorder(row)
     local frame, border = row.frame, row.border
+
+    -- Rows created by 1.0.0 retain their original decoration until reload.
+    if not border then return end
 
     if not row.selected or not frame:IsVisible() then
         border:Hide()
@@ -400,12 +403,17 @@ function lib:_UpdateBadges()
             local selected = batch.selected == index
             row.selected = selected
             row.button:SetSelected(selected)
-            row.background:SetColorTexture(
-                1,
-                1,
-                1,
-                selected and 0.14 or row.backgroundAlpha
-            )
+
+            -- Release 1.0.0 did not retain its background texture on the row.
+            if row.background then
+                row.background:SetColorTexture(
+                    1,
+                    1,
+                    1,
+                    selected and 0.14 or row.backgroundAlpha
+                )
+            end
+
             resizeSidebarRow(row)
         end
     end

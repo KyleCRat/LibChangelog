@@ -807,6 +807,31 @@ return function(lib)
         "deferred scale updates do not lay out a closed window"
     )
 
+    -- Release 1.0.0 retained these row fields before another embed could upgrade
+    -- the library. Its background and hover textures were private to its scripts.
+    local legacyRow = {
+        flow = firstRow.flow,
+        frame = firstRow.frame,
+        button = firstRow.button,
+        name = firstRow.name,
+        status = firstRow.status,
+    }
+    window.rows[1] = legacyRow
+    lib:_PrepareBatch({ first, second }, true)
+    window.frame:Show()
+    lib:_RefreshSidebarRows()
+    assert(
+        legacyRow.button.selected and not secondRow.button.selected,
+        "retained 1.0.0 rows remain usable alongside rows from the newer embed"
+    )
+    secondRow.button:Click("LeftButton")
+    assert(not legacyRow.button.selected and secondRow.button.selected)
+    legacyRow.button:Click("LeftButton")
+    assert(
+        legacyRow.button.selected and firstStore.acknowledgedVersion == "1",
+        "older row callbacks still select and acknowledge through the newer library"
+    )
+
     lib._window, lib._batch = originalWindow, originalBatch
     lib._GetSettingsLibrary, CreateFrame, C_AddOns =
         originalSettings, originalCreateFrame, originalAddOns

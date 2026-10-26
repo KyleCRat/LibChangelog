@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.1] - 2026-10-26
 
 ### Changed
 
@@ -9,6 +9,11 @@
   Keep the border, icon and labels aligned when moving, scrolling or changing
   UI scale. Soften alternating rows and hover shading, and use solid dark-grey
   backgrounds for the addon list and release-notes inset panels.
+
+### Fixed
+
+- Keep windows created by 1.0.0 usable when a newer embedded copy loads later.
+  Existing rows keep their original decoration until reload.
 
 ## [1.0.0] - 2026-10-12
 

@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibChangelog-1.0", 1
+local MAJOR, MINOR = "LibChangelog-1.0", 2
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not lib then return end
