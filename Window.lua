@@ -16,10 +16,77 @@ local DISMISS_HEIGHT, DISMISS_GAP = 34, 12
 local ROW_PADDING_X, ROW_PADDING_Y = 8, 5
 local ROW_BUTTON_SIZE, ROW_ICON_SIZE = 40, 28
 local ROW_TEXT_GAP, ROW_LINE_GAP = 8, 4
+local LAYOUT_EPSILON = 0.001
 local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
 
+local function createSidebarBorder(frame)
+    local border = CreateFrame("Frame", nil, frame)
+    border:EnableMouse(false)
+    border:Hide()
+
+    -- Use solid strokes like LibYvSkins' pixel borders. A textured backdrop
+    -- adds sampling and nine-slice geometry that a one-pixel outline does not need.
+    local edges = {}
+
+    for index = 1, 4 do
+        local edge = border:CreateTexture(nil, "BORDER")
+        edge:SetColorTexture(1, 0.82, 0, 0.9)
+        edge:SetBlendMode("BLEND")
+        edge:SetSnapToPixelGrid(false)
+        edge:SetTexelSnappingBias(0)
+        edges[index] = edge
+    end
+
+    local top, bottom, left, right = unpack(edges)
+    top:SetPoint("TOPLEFT")
+    top:SetPoint("TOPRIGHT")
+    bottom:SetPoint("BOTTOMLEFT")
+    bottom:SetPoint("BOTTOMRIGHT")
+
+    -- Horizontal strokes own the corners so the translucent edges never overlap.
+    left:SetPoint("TOPLEFT", top, "BOTTOMLEFT")
+    left:SetPoint("BOTTOMLEFT", bottom, "TOPLEFT")
+    right:SetPoint("TOPRIGHT", top, "BOTTOMRIGHT")
+    right:SetPoint("BOTTOMRIGHT", bottom, "TOPRIGHT")
+
+    return border, edges
+end
+
+local function layoutSidebarBorder(row)
+    local frame, border = row.frame, row.border
+
+    if not row.selected or not frame:IsVisible() then
+        border:Hide()
+        return
+    end
+
+    local scale = frame:GetEffectiveScale()
+    local unit = PixelUtil.GetPixelToUIUnitFactor() / scale
+
+    if frame:GetWidth() < unit * 4 or frame:GetHeight() < unit * 4 then
+        border:Hide()
+        return
+    end
+
+    -- Native pixel layout owns the row and its descendants. Re-snapping
+    -- measured screen edges during a drag introduces a second rounding path.
+    if row.borderUnit ~= unit then
+        local edges = row.borderEdges
+        border:SetPoint("TOPLEFT", frame, "TOPLEFT", unit, -unit)
+        border:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -unit, unit)
+        edges[1]:SetHeight(unit)
+        edges[2]:SetHeight(unit)
+        edges[3]:SetWidth(unit)
+        edges[4]:SetWidth(unit)
+        row.borderUnit = unit
+    end
+
+    border:Show()
+end
+
 local function resizeSidebarRow(row)
-    local textWidth = row.frame:GetWidth()
+    local frame = row.frame
+    local textWidth = frame:GetWidth()
         - ROW_PADDING_X * 2
         - ROW_BUTTON_SIZE
         - ROW_TEXT_GAP
@@ -29,19 +96,32 @@ local function resizeSidebarRow(row)
     local textHeight = row.name:GetStringHeight()
         + ROW_LINE_GAP
         + row.status:GetStringHeight()
-    local height =
-        math.ceil(math.max(ROW_BUTTON_SIZE, textHeight) + ROW_PADDING_Y * 2)
-
-    row.name:ClearAllPoints()
-    row.name:SetPoint(
-        "TOPLEFT",
-        row.button,
-        "RIGHT",
-        ROW_TEXT_GAP,
-        textHeight / 2
+    local height = PixelUtil.GetNearestPixelSize(
+        math.max(ROW_BUTTON_SIZE, textHeight) + ROW_PADDING_Y * 2,
+        frame:GetEffectiveScale()
     )
 
-    if row.frame:GetHeight() ~= height then row.frame:SetHeight(height) end
+    -- Corner anchors give the native pixel layout a stable origin instead of
+    -- combining the button's center with half of a measured font height.
+    row.button:SetPoint(
+        "TOPLEFT",
+        frame,
+        "TOPLEFT",
+        ROW_PADDING_X,
+        -(height - ROW_BUTTON_SIZE) / 2
+    )
+    row.name:SetPoint(
+        "TOPLEFT",
+        frame,
+        "TOPLEFT",
+        ROW_PADDING_X + ROW_BUTTON_SIZE + ROW_TEXT_GAP,
+        -(height - textHeight) / 2
+    )
+
+    -- Native float readback may differ slightly from the requested size.
+    if math.abs(frame:GetHeight() - height) > LAYOUT_EPSILON then
+        frame:SetHeight(height)
+    end
 
     -- Extend the icon button's native hit area over the entire row. One
     -- interaction target keeps hover, clicks, tooltips and keyboard use aligned.
@@ -52,6 +132,7 @@ local function resizeSidebarRow(row)
         verticalInset,
         verticalInset
     )
+    layoutSidebarBorder(row)
 end
 
 local function getAddonIcon(addonName)
@@ -81,13 +162,16 @@ function lib:_CreateSidebarRow(index)
     flow:AddFrame(frame, { fillWidth = true, marginBottom = 0 })
     flow:Finish()
 
+    local border, borderEdges = createSidebarBorder(frame)
+
+    local backgroundAlpha = index % 2 == 0 and 0.025 or 0.01
     local background = frame:CreateTexture(nil, "BACKGROUND")
     background:SetAllPoints()
-    background:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.08 or 0.025)
+    background:SetColorTexture(1, 1, 1, backgroundAlpha)
 
     local highlight = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
     highlight:SetAllPoints()
-    highlight:SetColorTexture(1, 1, 1, 0.1)
+    highlight:SetColorTexture(1, 1, 1, 0.035)
     highlight:Hide()
 
     local button = settings:CreateButton(frame, {
@@ -99,7 +183,6 @@ function lib:_CreateSidebarRow(index)
             lib:_SelectEntry(index, true)
         end,
     })
-    button:SetPoint("LEFT", ROW_PADDING_X, 0)
     button:HookScript("OnEnter", function()
         highlight:Show()
     end)
@@ -124,7 +207,12 @@ function lib:_CreateSidebarRow(index)
         button = button,
         name = name,
         status = status,
+        background = background,
+        backgroundAlpha = backgroundAlpha,
+        border = border,
+        borderEdges = borderEdges,
     }
+    PixelUtil.SetRoundLayoutToNearestPixelRecursively(frame, true)
     frame:HookScript("OnSizeChanged", function()
         resizeSidebarRow(row)
     end)
@@ -135,6 +223,16 @@ function lib:_CreateSidebarRow(index)
     end)
 
     return row
+end
+
+function lib:_RefreshSidebarRows()
+    local window = self._window
+
+    if not window or not window.frame:IsShown() then return end
+
+    for _, row in ipairs(window.rows) do
+        if row.frame:IsShown() then resizeSidebarRow(row) end
+    end
 end
 
 function lib:_UpdateSidebarRow(row, entry)
@@ -171,6 +269,7 @@ function lib:_EnsureWindow()
     local settings = self:_GetSettingsLibrary()
     local frame = CreateFrame("Frame", nil, UIParent, "DefaultPanelTemplate")
     frame:Hide()
+    frame:SetRoundLayoutToNearestPixel(true)
     frame:SetSize(WIDTH, HEIGHT)
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("HIGH")
@@ -187,10 +286,21 @@ function lib:_EnsureWindow()
     frame.TitleContainer:EnableMouse(true)
     frame.TitleContainer:RegisterForDrag("LeftButton")
     frame.TitleContainer:SetScript("OnDragStart", function()
-        if not InCombatLockdown() then frame:StartMoving() end
+        if InCombatLockdown() then return end
+
+        frame:StartMoving()
     end)
     frame.TitleContainer:SetScript("OnDragStop", function()
         frame:StopMovingOrSizing()
+    end)
+    frame:RegisterEvent("UI_SCALE_CHANGED")
+    frame:RegisterEvent("DISPLAY_SIZE_CHANGED")
+    frame:SetScript("OnEvent", function()
+        if not frame:IsShown() then return end
+
+        C_Timer.After(0, function()
+            lib:_RefreshSidebarRows()
+        end)
     end)
 
     local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -222,8 +332,7 @@ function lib:_EnsureWindow()
     window.sidebar:SetPoint("TOPLEFT", INSET, -CONTENT_TOP)
     window.sidebar:SetSize(SIDEBAR_WIDTH, sidebarHeight)
 
-    window.sidebarInset =
-        CreateFrame("Frame", nil, window.sidebar, "InsetFrameTemplate")
+    window.sidebarInset = self:_CreateInset(window.sidebar)
     window.sidebarInset:SetPoint("TOPLEFT")
     window.sidebarInset:SetPoint("BOTTOMRIGHT", 0, DISMISS_HEIGHT + DISMISS_GAP)
 
@@ -251,6 +360,7 @@ function lib:_EnsureWindow()
         end,
     })
     window.dismiss:SetPoint("BOTTOMLEFT")
+    PixelUtil.SetRoundLayoutToNearestPixelRecursively(window.sidebar, true)
 
     window.errorText = settings:CreateText(window.body, {
         text = "These update notes could not be displayed. They have not been marked as read.",
@@ -286,7 +396,16 @@ function lib:_UpdateBadges()
             if isNew then status = status .. "  |cffffd100NEW|r" end
 
             row.status:SetText(status)
-            row.button:SetSelected(batch.selected == index)
+
+            local selected = batch.selected == index
+            row.selected = selected
+            row.button:SetSelected(selected)
+            row.background:SetColorTexture(
+                1,
+                1,
+                1,
+                selected and 0.14 or row.backgroundAlpha
+            )
             resizeSidebarRow(row)
         end
     end
@@ -404,6 +523,7 @@ function lib:_RevealBatch()
         )
     )
     window.frame:Show()
+    self:_RefreshSidebarRows()
 end
 
 function lib:_DismissBatch()

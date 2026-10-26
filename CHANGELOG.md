@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Make the selected addon clearer with a border one physical pixel thick and
+  inset by one pixel on every side, plus a persistent brighter background.
+  Keep the border, icon and labels aligned when moving, scrolling or changing
+  UI scale. Soften alternating rows and hover shading, and use solid dark-grey
+  backgrounds for the addon list and release-notes inset panels.
+
 ## [1.0.0] - 2026-10-12
 
 ### Added

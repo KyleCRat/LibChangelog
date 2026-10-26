@@ -108,7 +108,7 @@ return function(lib)
     local originalCreateFrame = CreateFrame
 
     CreateFrame = function(_, _, parent, template)
-        return {
+        local frame = {
             parent = parent,
             template = template,
             points = {},
@@ -133,6 +133,16 @@ return function(lib)
                 return self.height
             end,
         }
+
+        if template == "InsetFrameTemplate" then
+            frame.Bg = {
+                SetColorTexture = function(self, ...)
+                    self.color = { ... }
+                end,
+            }
+        end
+
+        return frame
     end
 
     local settings = {

@@ -14,6 +14,18 @@ local View = lib._viewPrototype
 View.__index = View
 
 local HEADER_MIN_HEIGHT = 1
+local INSET_BACKGROUND = 17 / 255
+
+function lib:_CreateInset(parent)
+    local frame = CreateFrame("Frame", nil, parent, "InsetFrameTemplate")
+    frame.Bg:SetColorTexture(
+        INSET_BACKGROUND,
+        INSET_BACKGROUND,
+        INSET_BACKGROUND,
+        1
+    )
+    return frame
+end
 
 function View:_CreateLayout(settings, options)
     local header = CreateFrame("Frame", nil, self.frame)
@@ -39,12 +51,8 @@ function View:_CreateLayout(settings, options)
     self.headerHeight = HEADER_MIN_HEIGHT
     self.headerLayout:SetSize(width, self.headerHeight)
 
-    self.body = CreateFrame(
-        "Frame",
-        nil,
-        self.frame,
-        self.popup and "InsetFrameTemplate" or nil
-    )
+    self.body = self.popup and lib:_CreateInset(self.frame)
+        or CreateFrame("Frame", nil, self.frame)
     self.body:SetPoint("TOPLEFT", 0, -self.headerHeight)
     self.body:SetPoint("BOTTOMRIGHT")
 

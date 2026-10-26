@@ -42,6 +42,8 @@ globals:
         any: true
     MovieFrame:
         any: true
+    PixelUtil:
+        any: true
     ReadyCheckFrame:
         any: true
     ScrollBoxConstants:
